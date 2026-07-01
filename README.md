@@ -14,7 +14,7 @@ Notion2API 对 Notion AI 网页接口进行逆向工程，将其封装为标准�
 
 - **OpenAI 兼容** — 标准 `/v1/chat/completions` 端点，支持流式（SSE）和非流式响应
 - **三种运行模式** — Lite / Standard / Heavy，满足不同使用场景
-- **13 个 AI 模型** — Claude Sonnet/Opus、GPT-5.x、Gemini、Kimi、Grok、DeepSeek
+- **14 个 AI 模型** — Claude Sonnet/Opus、GPT-5.x、Gemini、Kimi、Grok、DeepSeek
 - **Thinking 面板** — 所有模型均支持推理过程展示
 - **Search 面板** — 展示 Web 搜索查询和来源链接
 - **多账号池** — Round-Robin 负载均衡，带冷却故障转移
@@ -127,6 +127,7 @@ uvicorn app.server:app --host 0.0.0.0 --port 8000
 | 模型名称 | 说明 |
 |---|---|
 | `claude-sonnet4.6` | 速度与质量的最佳平衡 — **最推荐** |
+| `claude-sonnet5` | 最新 Sonnet，推理与 agent 能力更强 |
 | `claude-opus4.6` | 推理能力更强，建议适量使用 |
 | `claude-opus4.7` | 更强推理能力 |
 | `claude-opus4.8` | 最新 Claude，推理能力最强 |
