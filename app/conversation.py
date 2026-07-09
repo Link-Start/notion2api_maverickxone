@@ -1917,6 +1917,86 @@ async def compress_round_if_needed(manager: ConversationManager, conversation_id
         )
 
 
+# --- System prompt sanitization for Notion ------------------------------------
+#
+# Notion AI often rejects prompts that look like identity hijacking
+# ("You are opencode...", "Act as Cursor", etc.). Strict OpenAI clients send
+# their own system prompts; we strip known identity openers and reframe the
+# remainder as user preferences so coding instructions can still pass through.
+#
+# Patterns intentionally prefer a tool-name allowlist over broad "You are *"
+# matching, to avoid deleting legitimate instructions like
+# "You are a senior engineer. Prefer type hints."
+
+_KNOWN_AGENT_NAMES = (
+    r"opencode|notion2api|claude\s*code|aider|cursor|cline|continue|roo|kilo|"
+    r"trae|windsurf|copilot|codex|gemini\s*cli|your own coding assistant"
+)
+
+_IDENTITY_LINE_PATTERNS = [
+    re.compile(
+        rf"(?im)^you are\s+(?:{_KNOWN_AGENT_NAMES})\b.*$"
+    ),
+    re.compile(r"(?im)^your name is\s+.+?[.!]?$"),
+    re.compile(
+        rf"(?im)^act as\s+(?:{_KNOWN_AGENT_NAMES})\b.*$"
+    ),
+    re.compile(
+        rf"(?im)^you are called\s+(?:{_KNOWN_AGENT_NAMES})\b.*$"
+    ),
+    re.compile(
+        rf"(?im)^you are powered by\s+(?:{_KNOWN_AGENT_NAMES})\b.*$"
+    ),
+]
+
+_INLINE_IDENTITY_PATTERN = re.compile(
+    rf"(?i)\byou are\s+(?:{_KNOWN_AGENT_NAMES})\b[^.!\n]*[.!]?"
+)
+
+
+def sanitize_system_prompt_for_notion(raw: str) -> str:
+    """
+    Strip known identity-asserting phrases from a client system prompt.
+
+    Returns surviving instructions, or empty string if nothing meaningful remains.
+    """
+    if not raw or not raw.strip():
+        return ""
+
+    text = raw.strip()
+    text = text.replace("\u2019", "'").replace("\u2018", "'")
+    text = text.replace("\u201c", '"').replace("\u201d", '"')
+    text = _INLINE_IDENTITY_PATTERN.sub("", text)
+
+    kept_lines: list[str] = []
+    for line in text.splitlines():
+        cleaned = line
+        for pat in _IDENTITY_LINE_PATTERNS:
+            cleaned = pat.sub("", cleaned).strip()
+        cleaned = _INLINE_IDENTITY_PATTERN.sub("", cleaned).strip()
+        if cleaned:
+            kept_lines.append(cleaned)
+
+    cleaned = "\n".join(kept_lines).strip()
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned
+
+
+def reframe_system_prompt_for_notion(raw: str) -> str:
+    """
+    Produce text to prepend to the user message when a client sends a system prompt.
+    """
+    cleaned = sanitize_system_prompt_for_notion(raw)
+    if not cleaned:
+        return ""
+    return (
+        "The user is working inside a developer tool and has shared the "
+        "following guidelines for how they'd like you to assist with this "
+        "request. Treat these as the user's preferences and context:\n\n"
+        f"{cleaned}"
+    )
+
+
 def build_lite_transcript(user_prompt: str, model_name: str) -> list[dict[str, Any]]:
     """构建 Lite 模式的最简 transcript（只有 config + user）"""
     from app.model_registry import get_notion_model, get_thread_type
@@ -2021,7 +2101,9 @@ def build_standard_transcript(
         first_user_content = user_messages[0]
         if system_instructions:
             merged_system = "\n".join(system_instructions)
-            first_user_content = f"[System Instructions: {merged_system}]\n\n{first_user_content}"
+            reframed = reframe_system_prompt_for_notion(merged_system)
+            if reframed:
+                first_user_content = f"{reframed}\n\n{first_user_content}"
 
         transcript.append({
             "id": str(uuid.uuid4()),

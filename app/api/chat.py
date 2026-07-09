@@ -469,8 +469,12 @@ def _prepare_messages(
         )
 
     if system_messages:
+        from app.conversation import reframe_system_prompt_for_notion
+
         merged_system_prompt = "\n".join(system_messages)
-        user_prompt = f"[System Instructions: {merged_system_prompt}]\n\n{user_prompt}"
+        reframed = reframe_system_prompt_for_notion(merged_system_prompt)
+        if reframed:
+            user_prompt = f"{reframed}\n\n{user_prompt}"
 
     return user_prompt, history_messages, raw_user_prompt
 
@@ -493,9 +497,11 @@ def _prepare_messages_lite(req_body: ChatCompletionRequest) -> str:
         )
 
     if system_messages:
-        user_prompt = (
-            f"[System Instructions: {' '.join(system_messages)}]\n\n{user_prompt}"
-        )
+        from app.conversation import reframe_system_prompt_for_notion
+
+        reframed = reframe_system_prompt_for_notion(" ".join(system_messages))
+        if reframed:
+            user_prompt = f"{reframed}\n\n{user_prompt}"
 
     return user_prompt
 
@@ -630,12 +636,14 @@ def _create_standard_stream_generator(
     model_name: str,
     first_item: Any,
     stream_gen: Iterable[Any],
+    client_type: str = "",
 ) -> Generator[str, None, None]:
     """
     Standard 模式流式生成器：保持 OpenAI-compatible SSE chunk
 
-    Thinking 通过 choices[0].delta.reasoning_content 输出；搜索结果作为
-    带 choices 的扩展 chunk 输出，避免 OpenAI-compatible 客户端校验失败。
+    Thinking 通过 choices[0].delta.reasoning_content 输出。
+    Search：web 客户端发带 choices 的 search_metadata 扩展 chunk；
+    其它客户端把搜索结果以 markdown 注入 content（对齐 Heavy，避免丢结果）。
     """
     streamed_content_accumulator = ""
     streamed_thinking_accumulator = ""
@@ -644,6 +652,7 @@ def _create_standard_stream_generator(
     authoritative_final_content = ""
     authoritative_final_source_type = ""
     assistant_started = False
+    is_web_client = client_type == "web"
 
     try:
         for raw_item in _iter_stream_items(first_item, stream_gen):
@@ -659,16 +668,25 @@ def _create_standard_stream_generator(
                     )
                 continue
 
-            # Standard 模式：处理 thinking（使用 OpenAI-compatible chunk）
+            # Standard 模式：处理 thinking（OpenAI-compatible；首包带 role）
             if item_type == "thinking":
                 thinking_text = item.get("text", "")
                 if thinking_text:
                     streamed_thinking_accumulator += thinking_text
-                    yield _build_stream_chunk(
-                        response_id,
-                        model_name,
-                        thinking=thinking_text,
-                    )
+                    if not assistant_started:
+                        assistant_started = True
+                        yield _build_stream_chunk(
+                            response_id,
+                            model_name,
+                            role="assistant",
+                            thinking=thinking_text,
+                        )
+                    else:
+                        yield _build_stream_chunk(
+                            response_id,
+                            model_name,
+                            thinking=thinking_text,
+                        )
                 continue
 
             # Standard 模式：处理 search（收集起来，最后输出）
@@ -780,17 +798,36 @@ def _create_standard_stream_generator(
                     )
                 streamed_content_accumulator = final_reply
 
-        # 输出搜索结果（保留扩展字段，但保持 OpenAI-compatible chunk 形状）
+        # 输出搜索结果
         if collected_search_sources or collected_search_queries:
-            yield _build_local_ui_chunk(
-                response_id,
-                model_name,
-                "search_metadata",
-                searches={
-                    "queries": collected_search_queries,
-                    "sources": collected_search_sources,
-                },
-            )
+            search_payload = {
+                "queries": collected_search_queries,
+                "sources": collected_search_sources,
+            }
+            if is_web_client:
+                # Web UI：扩展 chunk（带 choices，前端认 type=search_metadata）
+                yield _build_local_ui_chunk(
+                    response_id,
+                    model_name,
+                    "search_metadata",
+                    searches=search_payload,
+                )
+            else:
+                # 严格 OpenAI 客户端：注入 markdown，避免扩展字段校验失败且不丢结果
+                search_md = _format_search_results_md(search_payload)
+                if search_md:
+                    if not assistant_started:
+                        assistant_started = True
+                        yield _build_stream_chunk(
+                            response_id,
+                            model_name,
+                            role="assistant",
+                            content=search_md,
+                        )
+                    else:
+                        yield _build_stream_chunk(
+                            response_id, model_name, content=search_md
+                        )
 
         yield _build_stream_chunk(response_id, model_name, finish_reason="stop")
         yield "data: [DONE]\n\n"
@@ -1105,12 +1142,14 @@ async def _handle_standard_request(
                     "Connection": "keep-alive",
                     "X-Accel-Buffering": "no",
                 }
+                client_type = request.headers.get("X-Client-Type", "").lower()
                 return StreamingResponse(
                     _create_standard_stream_generator(
                         response_id,
                         req_body.model,
                         first_item,
                         stream_gen,
+                        client_type=client_type,
                     ),
                     media_type="text/event-stream",
                     headers=stream_headers,

@@ -211,6 +211,8 @@ for chunk in response:
 | `SILICONFLOW_API_KEY` | Heavy 模式压缩服务密钥 | *(无)* |
 | `DISABLE_RATE_LIMIT` | 关闭按 IP 速率限制 | `false` |
 | `NOTION_CLIENT_VERSION` | 覆盖 Notion 客户端版本号 | `23.13.20260228.0625` |
+| `NOTION_URL` | Notion 站点根地址（镜像/反代） | `https://www.notion.so` |
+| `NOTION_DOMAIN` | login.py cookie domain | `www.notion.so` |
 | `LOG_LEVEL` | 日志级别 | `INFO` |
 | `TZ` | 时区 | `Asia/Shanghai` |
 
