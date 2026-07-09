@@ -1919,75 +1919,61 @@ async def compress_round_if_needed(manager: ConversationManager, conversation_id
 
 # --- System prompt sanitization -------------------------------------------------
 #
-# Notion AI aggressively rejects prompts that look like identity hijacking
-# ("You are opencode...", "Act as X", etc.). When a strict OpenAI client
-# (opencode, Cherry Studio in agent mode, ...) sends its own system prompt,
-# Notion interprets it as a prompt-injection attempt and refuses to act.
-#
-# `sanitize_system_prompt_for_notion` strips identity-asserting sentences and
-# reframes the remainder as user-provided context, so the actual coding
-# instructions survive while the triggering phrases are removed.
+# Notion AI often rejects prompts that look like identity hijacking
+# ("You are opencode...", "Act as Cursor", etc.). Strip known agent identity
+# openers (allowlist) and reframe the rest as user preferences.
+# Prefer allowlist matching over broad "You are *" so legitimate instructions
+# like "You are a senior engineer. Prefer type hints." are kept.
 
-_IDENTITY_SENTENCE_PATTERNS = [
-    re.compile(r"(?im)^you are\s+[a-z0-9 _\-']*[,.]?", re.IGNORECASE),
-    re.compile(r"(?im)^your name is\s+.+?[.!]?$", re.IGNORECASE),
-    re.compile(r"(?im)^act as\s+.+?[.!]?$", re.IGNORECASE),
-    re.compile(r"(?im)^you are called\s+.+?[.!]?$", re.IGNORECASE),
-    re.compile(r"(?im)^you are powered by\s+.+?[.!]?$", re.IGNORECASE),
+_KNOWN_AGENT_NAMES = (
+    r"opencode|notion2api|claude\s*code|aider|cursor|cline|continue|roo|kilo|"
+    r"trae|windsurf|copilot|codex|gemini\s*cli|your own coding assistant"
+)
+
+_IDENTITY_LINE_PATTERNS = [
+    re.compile(rf"(?im)^you are\s+(?:{_KNOWN_AGENT_NAMES})\b.*$"),
+    re.compile(r"(?im)^your name is\s+.+?[.!]?$"),
+    re.compile(rf"(?im)^act as\s+(?:{_KNOWN_AGENT_NAMES})\b.*$"),
+    re.compile(rf"(?im)^you are called\s+(?:{_KNOWN_AGENT_NAMES})\b.*$"),
+    re.compile(rf"(?im)^you are powered by\s+(?:{_KNOWN_AGENT_NAMES})\b.*$"),
 ]
 
-# Catches "You are opencode, an interactive CLI tool that helps..." anywhere in a sentence
 _INLINE_IDENTITY_PATTERN = re.compile(
-    r"(?i)\byou are\s+(?:opencode|notion2api|claude code|aider|cursor|cline|continue|roo|kilo|your own coding assistant)[^.!]*[.!]?"
+    rf"(?i)\byou are\s+(?:{_KNOWN_AGENT_NAMES})\b[^.!\n]*[.!]?"
 )
 
 
 def sanitize_system_prompt_for_notion(raw: str) -> str:
     """
-    Strip identity-asserting phrases from a client system prompt so Notion AI
-    won't classify it as a prompt-injection / identity-hijack attempt.
+    Strip known identity-asserting phrases from a client system prompt.
 
-    Returns the surviving instructions verbatim (no wrapper), or an empty
-    string if nothing meaningful remains.
+    Returns surviving instructions, or empty string if nothing meaningful remains.
     """
     if not raw or not raw.strip():
         return ""
 
     text = raw.strip()
-
-    # Normalize smart quotes / whitespace
     text = text.replace("\u2019", "'").replace("\u2018", "'")
     text = text.replace("\u201c", '"').replace("\u201d", '"')
-
-    # Remove inline identity assertions first (e.g. the opener of opencode's prompt)
     text = _INLINE_IDENTITY_PATTERN.sub("", text)
 
-    # Process line by line so multi-sentence identity claims get removed cleanly
     kept_lines: list[str] = []
     for line in text.splitlines():
-        original = line
-        for pat in _IDENTITY_SENTENCE_PATTERNS:
-            line = pat.sub("", line).strip()
-        # Also strip mid-line occurrences like "You are opencode, ..." inside a longer sentence
-        line = _INLINE_IDENTITY_PATTERN.sub("", line).strip()
-        if line:
-            kept_lines.append(line)
-        elif original.strip():
-            # whole line was an identity claim — skip silently
-            pass
+        cleaned = line
+        for pat in _IDENTITY_LINE_PATTERNS:
+            cleaned = pat.sub("", cleaned).strip()
+        cleaned = _INLINE_IDENTITY_PATTERN.sub("", cleaned).strip()
+        if cleaned:
+            kept_lines.append(cleaned)
 
     cleaned = "\n".join(kept_lines).strip()
-    # Collapse runs of blank lines
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
     return cleaned
 
 
 def reframe_system_prompt_for_notion(raw: str) -> str:
     """
-    Produce the final text to prepend to the user's message when a client
-    sends a system prompt. Strips identity claims and wraps the remainder
-    as user-supplied context so Notion AI treats it as background info
-    rather than a competing instruction / injection.
+    Produce text to prepend to the user message when a client sends a system prompt.
     """
     cleaned = sanitize_system_prompt_for_notion(raw)
     if not cleaned:

@@ -647,9 +647,9 @@ def _create_standard_stream_generator(
     - search_metadata: 搜索结果
     - choices[0].delta.content: 正文内容
 
-    对非 web 客户端（如 opencode 等严格 OpenAI 兼容客户端），改用标准
-    OpenAI 格式输出 thinking（delta.reasoning_content）并跳过 search_metadata，
-    避免触发 strict type validation 错误。
+    对非 web 客户端（如 opencode 等严格 OpenAI 兼容客户端），thinking 使用
+    delta.reasoning_content；search 以 markdown 注入 content（对齐 Heavy），
+    避免自定义 SSE 字段触发 strict validation，同时不丢搜索结果。
     """
     streamed_content_accumulator = ""
     streamed_thinking_accumulator = ""
@@ -658,6 +658,7 @@ def _create_standard_stream_generator(
     authoritative_final_content = ""
     authoritative_final_source_type = ""
     assistant_started = False
+    is_web_client = client_type == "web"
 
     try:
         for raw_item in _iter_stream_items(first_item, stream_gen):
@@ -673,19 +674,28 @@ def _create_standard_stream_generator(
                     )
                 continue
 
-            # Standard 模式：处理 thinking（使用前端定义的 thinking_chunk 类型）
+            # Standard 模式：处理 thinking
             if item_type == "thinking":
                 thinking_text = item.get("text", "")
                 if thinking_text:
                     streamed_thinking_accumulator += thinking_text
-                    if client_type == "web":
-                        # Web UI: 输出前端协议定义的 thinking_chunk 事件
+                    if is_web_client:
+                        # Web UI: 前端协议 thinking_chunk
                         yield f"data: {json.dumps({'type': 'thinking_chunk', 'text': thinking_text}, ensure_ascii=False)}\n\n"
                     else:
-                        # 严格 OpenAI 客户端（opencode 等）：输出标准 delta.reasoning_content
-                        yield _build_stream_chunk(
-                            response_id, model_name, thinking=thinking_text
-                        )
+                        # 严格 OpenAI 客户端：reasoning_content；首包带 role
+                        if not assistant_started:
+                            assistant_started = True
+                            yield _build_stream_chunk(
+                                response_id,
+                                model_name,
+                                role="assistant",
+                                thinking=thinking_text,
+                            )
+                        else:
+                            yield _build_stream_chunk(
+                                response_id, model_name, thinking=thinking_text
+                            )
                 continue
 
             # Standard 模式：处理 search（收集起来，最后输出）
@@ -797,17 +807,36 @@ def _create_standard_stream_generator(
                     )
                 streamed_content_accumulator = final_reply
 
-        # 输出搜索结果（使用前端定义的 search_metadata 类型）
-        # 非 web 客户端跳过，避免破坏严格 OpenAI type validation
-        if client_type == "web" and (collected_search_sources or collected_search_queries):
-            search_metadata = {
-                "type": "search_metadata",
-                "searches": {
-                    "queries": collected_search_queries,
-                    "sources": collected_search_sources,
-                },
+        # 输出搜索结果
+        if collected_search_sources or collected_search_queries:
+            search_payload = {
+                "queries": collected_search_queries,
+                "sources": collected_search_sources,
             }
-            yield f"data: {json.dumps(search_metadata, ensure_ascii=False)}\n\n"
+            if is_web_client:
+                # Web UI：扩展 search_metadata（带 OpenAI chunk 外壳）
+                yield _build_local_ui_chunk(
+                    response_id,
+                    model_name,
+                    "search_metadata",
+                    searches=search_payload,
+                )
+            else:
+                # 严格客户端：markdown 注入 content，不丢结果
+                search_md = _format_search_results_md(search_payload)
+                if search_md:
+                    if not assistant_started:
+                        assistant_started = True
+                        yield _build_stream_chunk(
+                            response_id,
+                            model_name,
+                            role="assistant",
+                            content=search_md,
+                        )
+                    else:
+                        yield _build_stream_chunk(
+                            response_id, model_name, content=search_md
+                        )
 
         yield _build_stream_chunk(response_id, model_name, finish_reason="stop")
         yield "data: [DONE]\n\n"
