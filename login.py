@@ -22,13 +22,8 @@ import requests
 from websocket import create_connection
 
 
-# 与 app/notion_client.py 一致：支持区域镜像 / 反代，默认官方站点
-NOTION_URL = os.getenv("NOTION_URL", "https://www.notion.so").rstrip("/")
-NOTION_DOMAIN = os.getenv("NOTION_DOMAIN", "www.notion.so").lstrip(".")
-BASE_URL = NOTION_URL
-AI_URL = f"{NOTION_URL}/ai"
-# 用于 CDP 页面识别（子串匹配）；默认 notion.so，自定义域名时填主域即可
-_NOTION_HOST_HINT = NOTION_DOMAIN.removeprefix("www.") if NOTION_DOMAIN.startswith("www.") else NOTION_DOMAIN
+BASE_URL = "https://www.notion.so"
+AI_URL = "https://www.notion.so/ai"
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
@@ -216,7 +211,7 @@ def _find_debug_target(port: int) -> dict[str, Any] | None:
         if not isinstance(item, dict):
             continue
         url = str(item.get("url") or "")
-        if _NOTION_HOST_HINT in url or "accounts.google.com" in url:
+        if "notion.so" in url or "accounts.google.com" in url:
             return item
     return items[0] if items else None
 
@@ -251,7 +246,7 @@ def _extract_cookies_from_cdp(port: int) -> dict[str, str]:
         try:
             current_url = client.call("Runtime.evaluate", {"expression": "location.href", "returnByValue": True})
             current_href = str(current_url.get("result", {}).get("value") or "") if isinstance(current_url, dict) else ""
-            if _NOTION_HOST_HINT not in current_href:
+            if "notion.so" not in current_href:
                 client.call("Page.navigate", {"url": AI_URL})
                 time.sleep(2)
         except Exception:
@@ -354,7 +349,7 @@ def _session_for_token(token_v2: str, cookies: dict[str, str] | None = None) -> 
     for name, value in cookie_values.items():
         if not value:
             continue
-        session.cookies.set(name, value, domain=NOTION_DOMAIN, path="/")
+        session.cookies.set(name, value, domain="www.notion.so", path="/")
     return session
 
 

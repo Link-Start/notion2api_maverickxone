@@ -208,8 +208,6 @@ Access `http://localhost:8000` for the built-in **Notion AI Studio** interface:
 | `SILICONFLOW_API_KEY` | Required for Heavy mode compression | *(none)* |
 | `DISABLE_RATE_LIMIT` | Disable per-IP rate limiting | `false` |
 | `NOTION_CLIENT_VERSION` | Override Notion client version header | `23.13.20260228.0625` |
-| `NOTION_URL` | Notion site base URL (mirror/proxy) | `https://www.notion.so` |
-| `NOTION_DOMAIN` | Cookie domain for login.py | `www.notion.so` |
 | `LOG_LEVEL` | Logging level | `INFO` |
 | `TZ` | Timezone | `Asia/Shanghai` |
 
