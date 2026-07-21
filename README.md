@@ -6,7 +6,7 @@
 
 Notion2API 对 Notion AI 网页接口进行逆向工程，将其封装为标准的 `/v1/chat/completions` 端点，可直接用于 Cherry Studio、Zotero 以及任何兼容 OpenAI 的客户端。
 
-2026.06.10: 由于我的notion是business试用，不能使用fable5模型，故无法更新，欢迎大家自己抓取模型名称后提交PR。（F12，Network-payload-runInferenceScript里面，最下侧请求展开获取model内部代号即可）
+2026.07.11：模型列表已同步至 21 个，包含 GPT-5.6、Gemini 3.5 Flash、Kimi K2.7 Code、GLM 5.2、Fable 5 等新模型。
 
 ---
 
@@ -14,7 +14,7 @@ Notion2API 对 Notion AI 网页接口进行逆向工程，将其封装为标准�
 
 - **OpenAI 兼容** — 标准 `/v1/chat/completions` 端点，支持流式（SSE）和非流式响应
 - **三种运行模式** — Lite / Standard / Heavy，满足不同使用场景
-- **14 个 AI 模型** — Claude Sonnet/Opus、GPT-5.x、Gemini、Kimi、Grok、DeepSeek
+- **21 个 AI 模型** — Claude、GPT-5.x、Gemini、Kimi、Grok、DeepSeek、GLM、Fable
 - **Thinking 面板** — 所有模型均支持推理过程展示
 - **Search 面板** — 展示 Web 搜索查询和来源链接
 - **多账号池** — Round-Robin 负载均衡，带冷却故障转移
@@ -131,15 +131,22 @@ uvicorn app.server:app --host 0.0.0.0 --port 8000
 | `claude-opus4.6` | 推理能力更强，建议适量使用 |
 | `claude-opus4.7` | 更强推理能力 |
 | `claude-opus4.8` | 最新 Claude，推理能力最强 |
-| `gpt-5.5` | 最新 GPT（Beta） |
+| `claude-haiku4.5` | Haiku 4.5 |
+| `gpt-5.6-sol` | GPT-5.6 Sol |
+| `gpt-5.6-terra` | GPT-5.6 Terra |
+| `gpt-5.6-luna` | GPT-5.6 Luna |
+| `gpt-5.5` | GPT-5.5 |
 | `gpt-5.4` | OpenAI 模型 |
-| `gpt-5.2` | OpenAI 模型 |
-| `gemini-2.5flash` | 原生快速，无 thinking 延迟 — 快速任务首选 |
+| `gemini-3.5flash` | Gemini 3.5 Flash |
 | `gemini-3.1pro` | Google 最强推理模型 |
-| `kimi-2.6` | Moonshot AI（Beta） |
+| `gemini-3flash` | Gemini 3 Flash |
+| `kimi-2.7` | Kimi K2.7 Code |
 | `grok-4.3` | xAI Grok 4.3 |
+| `spacexai-4.5` | SpaceXAI 4.5 |
 | `grok-build0.1` | xAI Grok Build 0.1 |
 | `deepseek-v4pro` | DeepSeek V4 Pro |
+| `glm-5.2` | GLM 5.2 |
+| `fable-5` | Fable 5 |
 
 完整列表：`GET http://localhost:8000/v1/models`
 
@@ -185,7 +192,7 @@ for chunk in response:
 访问 `http://localhost:8000`，使用内置的 **Notion AI Studio** 界面：
 
 - **对话管理** — 新建、重命名、删除、收藏/置顶
-- **模型选择器** — 按服务商分组（Anthropic / OpenAI / Google / Moonshot / xAI / DeepSeek）
+- **模型选择器** — 按服务商分组（Anthropic / OpenAI / Google / Moonshot / xAI / DeepSeek / Zhipu / Notion）
 - **Thinking 面板** — 可折叠的推理过程展示，带计时器
 - **Search 面板** — 可折叠的搜索查询和来源链接
 - **环境粒子动画** — 天气效果：默认 / 雪 / 雨 / 晴天 / 夜晚

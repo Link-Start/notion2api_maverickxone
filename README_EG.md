@@ -12,7 +12,7 @@ Notion2API reverse-engineers the Notion AI web interface and exposes it as a sta
 
 - **OpenAI Compatible** — Standard `/v1/chat/completions` endpoint, streaming (SSE) and non-streaming
 - **Three Operation Modes** — Lite / Standard / Heavy to fit different use cases
-- **13 AI Models** — Claude Sonnet/Opus, GPT-5.x, Gemini, Kimi, Grok, DeepSeek
+- **21 AI Models** — Claude, GPT-5.x, Gemini, Kimi, Grok, DeepSeek, GLM, Fable
 - **Thinking Panel** — Reasoning process display for all models
 - **Search Panel** — Web search queries and source links
 - **Multi-Account Pool** — Round-Robin load balancing with cooldown failover
@@ -125,18 +125,26 @@ Access the Web UI at `http://localhost:8000`.
 | Model Name | Description |
 |---|---|
 | `claude-sonnet4.6` | Best balance of speed and quality — **most recommended** |
+| `claude-sonnet5` | Sonnet 5 |
 | `claude-opus4.6` | Stronger reasoning, use sparingly |
 | `claude-opus4.7` | Stronger reasoning |
 | `claude-opus4.8` | Newest Claude, strongest reasoning |
-| `gpt-5.5` | Latest GPT (Beta) |
+| `claude-haiku4.5` | Haiku 4.5 |
+| `gpt-5.6-sol` | GPT-5.6 Sol |
+| `gpt-5.6-terra` | GPT-5.6 Terra |
+| `gpt-5.6-luna` | GPT-5.6 Luna |
+| `gpt-5.5` | GPT-5.5 |
 | `gpt-5.4` | OpenAI model |
-| `gpt-5.2` | OpenAI model |
-| `gemini-2.5flash` | Native fast, no thinking delay — great for quick tasks |
+| `gemini-3.5flash` | Gemini 3.5 Flash |
 | `gemini-3.1pro` | Google's strongest reasoning model |
-| `kimi-2.6` | Moonshot AI (Beta) |
+| `gemini-3flash` | Gemini 3 Flash |
+| `kimi-2.7` | Kimi K2.7 Code |
 | `grok-4.3` | xAI Grok 4.3 |
+| `spacexai-4.5` | SpaceXAI 4.5 |
 | `grok-build0.1` | xAI Grok Build 0.1 |
 | `deepseek-v4pro` | DeepSeek V4 Pro |
+| `glm-5.2` | GLM 5.2 |
+| `fable-5` | Fable 5 |
 
 Full list via API: `GET http://localhost:8000/v1/models`
 

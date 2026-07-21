@@ -2,7 +2,7 @@
 
 > 本文档记录项目的完整状态、架构细节、开发历程和当前进展。  
 > 目标：阅读本文档后，即可全面掌握项目最新全貌。  
-> 最后更新：2026-06-06（接入 Grok 4.3、Grok Build 0.1、DeepSeek V4 Pro）
+> 最后更新：2026-07-11（模型列表同步至 21 个）
 
 ---
 
@@ -16,7 +16,7 @@ Notion2API 是一个将 **Notion AI** 逆向封装为 **OpenAI 兼容 API** 的�
 
 - **OpenAI 兼容 API**：标准 `/v1/chat/completions` 端点，支持流式（SSE）和非流式响应
 - **三种运行模式**：Lite / Standard / Heavy，满足不同场景需求
-- **13 个 AI 模型**：Claude Sonnet/Opus、GPT-5.x、Gemini、Kimi、Grok、DeepSeek
+- **21 个 AI 模型**：Claude、GPT-5.x、Gemini、Kimi、Grok、DeepSeek、GLM、Fable
 - **三层记忆系统**（Heavy 模式）：滑动窗口 + 压缩摘要 + 完整归档
 - **多账号负载均衡**：Round-Robin 轮询 + 冷却机制
 - **内置 Web UI**：Claude 风格界面，支持 Thinking 面板、Search 面板、对话管理
@@ -286,18 +286,26 @@ Notion 的流式响应是 NDJSON 格式，每行是一个 JSON 对象。解析�
 | 外部名称 | Notion 内部代号 | Thread Type | 说明 |
 |----------|-----------------|-------------|------|
 | claude-sonnet4.6 | almond-croissant-low | workflow | **推荐**，速度与质量最佳平衡 |
+| claude-sonnet5 | angel-cake-high | workflow | Sonnet 5 |
 | claude-opus4.6 | avocado-froyo-medium | workflow | 更强推理，不建议频繁使用 |
 | claude-opus4.7 | apricot-sorbet-high | workflow | 更强推理 |
 | claude-opus4.8 | ambrosia-tart-high | workflow | 最新 Claude，最强推理 |
-| gpt-5.2 | oatmeal-cookie | workflow | OpenAI 模型 |
+| claude-haiku4.5 | anthropic-haiku-4.5 | workflow | Haiku 4.5 |
+| gpt-5.6-sol | orange-mousse | workflow | GPT-5.6 Sol |
+| gpt-5.6-terra | orchid-muffin | workflow | GPT-5.6 Terra |
+| gpt-5.6-luna | olive-jellyroll | workflow | GPT-5.6 Luna |
 | gpt-5.4 | oval-kumquat-medium | workflow | OpenAI 模型 |
-| gpt-5.5 | opal-quince-medium | workflow | 最新 GPT（Beta） |
-| gemini-2.5flash | vertex-gemini-2.5-flash | markdown-chat | 原生快速，无 thinking 延迟 |
+| gpt-5.5 | opal-quince-medium | workflow | GPT-5.5 |
+| gemini-3.5flash | vertex-gemini-3.5-flash | markdown-chat | Gemini 3.5 Flash |
 | gemini-3.1pro | galette-medium-thinking | workflow | Google 最强推理模型 |
-| kimi-2.6 | fireworks-kimi-k2.6 | workflow | Moonshot AI（Beta） |
+| gemini-3flash | gingerbread | workflow | Gemini 3 Flash |
+| kimi-2.7 | fireworks-kimi-k2.7 | workflow | Kimi K2.7 Code |
 | grok-4.3 | xigua-mochi-medium | workflow | xAI Grok 4.3 |
+| spacexai-4.5 | strawberry-whoopiepie | workflow | SpaceXAI 4.5 |
 | grok-build0.1 | xinomavro-cake | workflow | xAI Grok Build 0.1 |
 | deepseek-v4pro | baseten-deepseek-v4-pro | workflow | DeepSeek V4 Pro |
+| glm-5.2 | baseten-glm-5.2 | workflow | GLM 5.2 |
+| fable-5 | acai-budino-high | workflow | Fable 5 |
 
 ### 4.7 前端 Web UI
 
@@ -569,10 +577,10 @@ uvicorn app.server:app --host 0.0.0.0 --port 8000
 
 ## 十二、当前工作重点
 
-**截至 2026-06**：
+**截至 2026-07**：
 
 **已完成**：
-- ✅ 同步官方新模型：Claude Opus 4.8、Grok 4.3、Grok Build 0.1、DeepSeek V4 Pro（共 13 个模型）
+- ✅ 模型列表已同步至 21 个，覆盖最新 GPT-5.6、Gemini、Claude、Kimi、GLM、Grok、DeepSeek 与 Fable 模型
 - ✅ 合并 PR #12：浏览器辅助登录 `login.py`（CDP，支持 Chrome/Edge，自动写入 accounts.json + .env）
 - ✅ 文档结构重组：README 双语重写、issues.md 中英合并、删除冗余 md 文件（ARCHITECTURE.md、DEPLOYMENT.md、accounts.README.md、CLAUDE.md、issues_CN.md）
 - ✅ 结构化错误提示系统（11 种错误码，前端红色错误卡片）
