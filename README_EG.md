@@ -12,7 +12,7 @@ Notion2API reverse-engineers the Notion AI web interface and exposes it as a sta
 
 - **OpenAI Compatible** — Standard `/v1/chat/completions` endpoint, streaming (SSE) and non-streaming
 - **Three Operation Modes** — Lite / Standard / Heavy to fit different use cases
-- **21 AI Models** — Claude, GPT-5.x, Gemini, Kimi, Grok, DeepSeek, GLM, Fable
+- **22 AI Models** — Claude (incl. Opus 5), GPT-5.x, Gemini, Kimi, Grok, DeepSeek, GLM, Fable
 - **Thinking Panel** — Reasoning process display for all models
 - **Search Panel** — Web search queries and source links
 - **Multi-Account Pool** — Round-Robin load balancing with cooldown failover
@@ -128,7 +128,8 @@ Access the Web UI at `http://localhost:8000`.
 | `claude-sonnet5` | Sonnet 5 |
 | `claude-opus4.6` | Stronger reasoning, use sparingly |
 | `claude-opus4.7` | Stronger reasoning |
-| `claude-opus4.8` | Newest Claude, strongest reasoning |
+| `claude-opus4.8` | Strong reasoning Claude |
+| `claude-opus5` | Newest Claude Opus, strongest reasoning |
 | `claude-haiku4.5` | Haiku 4.5 |
 | `gpt-5.6-sol` | GPT-5.6 Sol |
 | `gpt-5.6-terra` | GPT-5.6 Terra |
@@ -147,6 +148,8 @@ Access the Web UI at `http://localhost:8000`.
 | `fable-5` | Fable 5 |
 
 Full list via API: `GET http://localhost:8000/v1/models`
+
+To add or sync a Notion AI model, see [`docs/ADD_MODEL.md`](./docs/ADD_MODEL.md) (checklist of files to update — no need to search the whole repo).
 
 ---
 

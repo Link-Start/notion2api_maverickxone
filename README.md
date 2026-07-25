@@ -6,7 +6,7 @@
 
 Notion2API 对 Notion AI 网页接口进行逆向工程，将其封装为标准的 `/v1/chat/completions` 端点，可直接用于 Cherry Studio、Zotero 以及任何兼容 OpenAI 的客户端。
 
-2026.07.11：模型列表已同步至 21 个，包含 GPT-5.6、Gemini 3.5 Flash、Kimi K2.7 Code、GLM 5.2、Fable 5 等新模型。
+2026.07.25：模型列表已同步至 22 个，新增 Claude Opus 5（`agave-flan`）。
 
 ---
 
@@ -14,7 +14,7 @@ Notion2API 对 Notion AI 网页接口进行逆向工程，将其封装为标准�
 
 - **OpenAI 兼容** — 标准 `/v1/chat/completions` 端点，支持流式（SSE）和非流式响应
 - **三种运行模式** — Lite / Standard / Heavy，满足不同使用场景
-- **21 个 AI 模型** — Claude、GPT-5.x、Gemini、Kimi、Grok、DeepSeek、GLM、Fable
+- **22 个 AI 模型** — Claude（含 Opus 5）、GPT-5.x、Gemini、Kimi、Grok、DeepSeek、GLM、Fable
 - **Thinking 面板** — 所有模型均支持推理过程展示
 - **Search 面板** — 展示 Web 搜索查询和来源链接
 - **多账号池** — Round-Robin 负载均衡，带冷却故障转移
@@ -130,7 +130,8 @@ uvicorn app.server:app --host 0.0.0.0 --port 8000
 | `claude-sonnet5` | 最新 Sonnet，推理与 agent 能力更强 |
 | `claude-opus4.6` | 推理能力更强，建议适量使用 |
 | `claude-opus4.7` | 更强推理能力 |
-| `claude-opus4.8` | 最新 Claude，推理能力最强 |
+| `claude-opus4.8` | 强推理 Claude |
+| `claude-opus5` | 最新 Claude Opus，推理能力最强 |
 | `claude-haiku4.5` | Haiku 4.5 |
 | `gpt-5.6-sol` | GPT-5.6 Sol |
 | `gpt-5.6-terra` | GPT-5.6 Terra |
@@ -149,6 +150,8 @@ uvicorn app.server:app --host 0.0.0.0 --port 8000
 | `fable-5` | Fable 5 |
 
 完整列表：`GET http://localhost:8000/v1/models`
+
+如需新增或同步 Notion AI 模型，请阅读 [`docs/ADD_MODEL.md`](./docs/ADD_MODEL.md)（必改文件清单，无需全库搜索）。
 
 ---
 
